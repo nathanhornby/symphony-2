@@ -51,9 +51,7 @@
 		 * @return boolean
 		 */
 		public static function edit($id, array $fields) {
-			return Symphony::Database()->update($fields, 'tbl_authors', sprintf(
-				" `id` = %d", $id
-			));
+			return Symphony::Database()->update($fields, 'tbl_authors', '`id` = ?', array($id));
 		}
 
 		/**
@@ -64,9 +62,7 @@
 		 * @return boolean
 		 */
 		public static function delete($id) {
-			return Symphony::Database()->delete('tbl_authors', sprintf(
-				" `id` = %d", $id
-			));
+			return Symphony::Database()->delete('tbl_authors', '`id` = ?', array($id));
 		}
 
 		/**
@@ -199,13 +195,14 @@
 		 */
 		public static function fetchByUsername($username) {
 			if(!isset(self::$_pool[$username])) {
-				$records = Symphony::Database()->fetchRow(0, sprintf("
+				$records = Symphony::Database()->fetchRow(0, "
 						SELECT *
 						FROM `tbl_authors`
-						WHERE `username` = '%s'
+						WHERE `username` = ?
 						LIMIT 1
-					",	Symphony::Database()->cleanValue($username)
-				));
+					",	
+					array($username)
+				);
 
 				if(!is_array($records) || empty($records)) return array();
 

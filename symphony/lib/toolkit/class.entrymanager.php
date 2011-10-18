@@ -103,7 +103,7 @@
 			foreach($entry->getData() as $field_id => $field){
 				if(!is_array($field) || empty($field)) continue;
 
-				Symphony::Database()->delete('tbl_entries_data_' . $field_id, " `entry_id` = '$entry_id'");
+				Symphony::Database()->delete('tbl_entries_data_' . $field_id, " `entry_id` = ?", array($entry_id));
 
 				$data = array(
 					'entry_id' => $entry_id
@@ -146,7 +146,10 @@
 					'modification_date_gmt' => $entry->get('modification_date_gmt')
 				),
 				'tbl_entries',
-				sprintf(' `id` = %d', $entry->get('id'))
+				' `id` = ?',
+				array(
+					$entry->get('id')
+				)
 			);
 
 			// Iterate over all data for this entry, deleting existing data first
@@ -155,7 +158,7 @@
 				if (empty($field_id)) continue;
 
 				try{
-					Symphony::Database()->delete('tbl_entries_data_' . $field_id, sprintf(' `entry_id` = %d', $entry->get('id')));
+					Symphony::Database()->delete('tbl_entries_data_' . $field_id, '`entry_id` = ?', array($entry->get('id')));
 				}
 				catch(Exception $e){
 					// Discard?
@@ -235,8 +238,6 @@
 			// and process the deletion in chunks.
 			$chunks = array_chunk($entries, 2500);
 			foreach($chunks as $chunk) {
-				$entry_list = implode("', '", $chunk);
-
 				// If we weren't given a `section_id` we'll have to process individually
 				// If we don't need data for any field, we can process the whole chunk
 				// without building Entry objects, otherwise we'll need to build
@@ -280,7 +281,8 @@
 					}
 				}
 
-				Symphony::Database()->delete('tbl_entries', " `id` IN ('$entry_list') ");
+				$placeholders = Database::addPlaceholders($chunk);
+				Symphony::Database()->delete('tbl_entries', " `id` IN ($placeholders) ", $chunk);
 			}
 
 			return true;
@@ -350,7 +352,7 @@
 			}
 
 			else if (self::$_fetchSortField == 'system:id' || self::$_fetchSortField == 'id') {
-				$sort = 'ORDER BY `e`.`id`' . self::$_fetchSortDirection;
+				$sort = 'ORDER BY `e`.`id` ' . self::$_fetchSortDirection;
 			}
 
 			else if (self::$_fetchSortField && $field = FieldManager::fetch(self::$_fetchSortField)) {
@@ -364,7 +366,7 @@
 			}
 
 			else {
-				$sort = 'ORDER BY `e`.`id`' . self::$_fetchSortDirection;
+				$sort = 'ORDER BY `e`.`id` ' . self::$_fetchSortDirection;
 			}
 
 			if ($entry_id && !is_array($entry_id)) $entry_id = array($entry_id);
@@ -518,7 +520,7 @@
 		 *  The Section ID for this Entry's section
 		 */
 		public static function fetchEntrySectionID($entry_id){
-			return Symphony::Database()->fetchVar('section_id', 0, "SELECT `section_id` FROM `tbl_entries` WHERE `id` = '$entry_id' LIMIT 1");
+			return Symphony::Database()->fetchVar('section_id', 0, "SELECT `section_id` FROM `tbl_entries` WHERE `id` = ? LIMIT 1", array($entry_id));
 		}
 
 		/**
@@ -541,13 +543,17 @@
 
 			if(!is_object($section)) return false;
 
-			return Symphony::Database()->fetchVar('count', 0, "
+			return Symphony::Database()->fetchVar('count', 0, sprintf("
 				SELECT count(".($group ? 'DISTINCT ' : '')."`e`.id) as `count`
 				FROM `tbl_entries` AS `e`
-				$joins
-				WHERE `e`.`section_id` = '$section_id'
+				%s
+				WHERE `e`.`section_id` = %d
+				%s
+			",
+				$joins,
+				$section_id,
 				$where
-			");
+			));
 		}
 
 		/**

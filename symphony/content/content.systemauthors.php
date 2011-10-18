@@ -732,7 +732,7 @@
 
 					// All good, let's save the Author
 					if(is_array($this->_errors) && empty($this->_errors) && $this->_Author->commit()) {
-						Symphony::Database()->delete('tbl_forgotpass', " `expiry` < '".DateTimeObj::getGMT('c')."' OR `author_id` = '".$author_id."' ");
+						Symphony::Database()->delete('tbl_forgotpass', "`expiry` < ? OR `author_id` = ?", array(DateTimeObj::getGMT('c'), $author_id));
 
 						if($isOwner) {
 							Administration::instance()->login($this->_Author->get('username'), $this->_Author->get('password'), true);

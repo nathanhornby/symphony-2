@@ -52,7 +52,7 @@
 		 * @return boolean
 		 */
 		public static function edit($section_id, array $settings){
-			if(!Symphony::Database()->update($settings, 'tbl_sections', " `id` = $section_id")) return false;
+			if(!Symphony::Database()->update($settings, 'tbl_sections', ' `id` = ?', array($section_id))) return false;
 
 			return true;
 		}
@@ -67,11 +67,11 @@
 		 *	Returns true when completed
 		 */
 		public static function delete($section_id){
-			$details = Symphony::Database()->fetchRow(0, "SELECT `sortorder` FROM tbl_sections WHERE `id` = '$section_id'");
+			$details = Symphony::Database()->fetchRow(0, "SELECT `sortorder` FROM tbl_sections WHERE `id` = ?", array($section_id));
 
 			// Delete all the entries
 			include_once(TOOLKIT . '/class.entrymanager.php');
-			$entries = Symphony::Database()->fetchCol('id', "SELECT `id` FROM `tbl_entries` WHERE `section_id` = '$section_id'");
+			$entries = Symphony::Database()->fetchCol('id', "SELECT `id` FROM `tbl_entries` WHERE `section_id` = ?", array($section_id));
 			EntryManager::delete($entries);
 
 			// Delete all the fields
@@ -82,13 +82,13 @@
 			}
 
 			// Delete the section
-			Symphony::Database()->delete('tbl_sections', " `id` = '$section_id'");
+			Symphony::Database()->delete('tbl_sections', "`id` = ?", array($section_id));
 
 			// Update the sort orders
 			Symphony::Database()->query("UPDATE tbl_sections SET `sortorder` = (`sortorder` - 1) WHERE `sortorder` > '".$details['sortorder']."'");
 
 			// Delete the section associations
-			Symphony::Database()->delete('tbl_sections_association', " `parent_section_id` = '$section_id'");
+			Symphony::Database()->delete('tbl_sections_association', "`parent_section_id` = ?", array($section_id));
 
 			return true;
 		}
@@ -129,17 +129,19 @@
 				return self::$_pool[$section_id];
 			}
 
-			$sql = sprintf("
-					SELECT `s`.*
-					FROM `tbl_sections` AS `s`
-					%s
-					%s
-				",
-				!empty($section_id) ? " WHERE `s`.`id` IN (" . implode(',', $section_ids) . ") " : "",
-				empty($section_id) ? " ORDER BY `s`.`$sortfield` $order" : ""
-			);
+			if(!empty($section_id)) {
+				$placeholders = Database::addPlaceholders($section_ids);
+				$additional_sql = " WHERE `s`.`id` IN ($placeholders) ";
+			}
+			else {
+				$additional_sql = " ORDER BY `s`.`$sortfield` $order";
+			}
 
-			if(!$sections = Symphony::Database()->fetch($sql)) return ($returnSingle ? false : array());
+			$sql = "SELECT `s`.* FROM `tbl_sections` AS `s`" . $additional_sql;
+
+			if(!$sections = Symphony::Database()->fetch($sql, null, array(), $section_ids)) {
+				return ($returnSingle ? false : array());
+			}
 
 			$ret = array();
 
@@ -167,7 +169,7 @@
 		 *	The Section ID
 		 */
 		public static function fetchIDFromHandle($handle){
-			return Symphony::Database()->fetchVar('id', 0, "SELECT `id` FROM `tbl_sections` WHERE `handle` = '$handle' LIMIT 1");
+			return Symphony::Database()->fetchVar('id', 0, "SELECT `id` FROM `tbl_sections` WHERE `handle` = ? LIMIT 1", array($handle));
 		}
 
 		/**
@@ -246,10 +248,13 @@
 		 * @return boolean
 		 */
 		public static function removeSectionAssociation($field_id) {
-			return Symphony::Database()->delete('tbl_sections_association', sprintf('
-				`child_section_field_id` = %1$d OR `parent_section_field_id` = %1$d
-			',
-			$field_id));
+			return Symphony::Database()->delete(
+				'tbl_sections_association', 
+				'`child_section_field_id` = ? OR `parent_section_field_id` = ?',
+				array(
+					$field_id, $field_id
+				)
+			);
 		}
 
 		/**

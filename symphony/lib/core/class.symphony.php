@@ -336,8 +336,6 @@
 				if(!self::Database()->isConnected()) return false;
 
 				self::Database()->setPrefix($details['tbl_prefix']);
-				self::Database()->setCharacterEncoding();
-				self::Database()->setCharacterSet();
 
 				// Set Timezone, need to convert human readable, ie. Australia/Brisbane to be +10:00
 				// @see https://github.com/symphonycms/symphony-2/issues/1726
@@ -408,7 +406,7 @@
 					// Only migrate hashes if there is no update available as the update might change the tbl_authors table.
 					if($this->isUpgradeAvailable() === false && Cryptography::requiresMigration($this->Author->get('password'))){
 						$this->Author->set('password', Cryptography::hash($password));
-						self::Database()->update(array('password' => $this->Author->get('password')), 'tbl_authors', " `id` = '" . $this->Author->get('id') . "'");
+						self::Database()->update(array('password' => $this->Author->get('password')), 'tbl_authors', ' `id` = ?', array($this->Author->get('id')));
 					}
 
 					$this->Cookie->set('username', $username);
@@ -416,7 +414,7 @@
 					self::Database()->update(array(
 						'last_seen' => DateTimeObj::get('Y-m-d H:i:s')),
 						'tbl_authors',
-						sprintf(" `id` = %d", $this->Author->get('id'))
+						' `id` = ?', array($this->Author->get('id'))
 					);
 
 					return true;
@@ -441,40 +439,43 @@
 		 *  True if the Author is logged in, false otherwise
 		 */
 		public function loginFromToken($token){
-			$token = self::Database()->cleanValue($token);
-
 			if(strlen(trim($token)) == 0) return false;
 
 			if(strlen($token) == 6 | strlen($token) == 16) {
-				$row = self::Database()->fetchRow(0, sprintf("
+				$row = self::Database()->fetchRow(0, "
 						SELECT `a`.`id`, `a`.`username`, `a`.`password`
 						FROM `tbl_authors` AS `a`, `tbl_forgotpass` AS `f`
 						WHERE `a`.`id` = `f`.`author_id`
-						AND `f`.`expiry` > '%s'
-						AND `f`.`token` = '%s'
+						AND `f`.`expiry` > ?
+						AND `f`.`token` = ?
 						LIMIT 1
 					",
-					DateTimeObj::getGMT('c'), $token
-				));
+					array(
+						DateTimeObj::getGMT('c'),
+						$token
+					)
+				);
 
-				self::Database()->delete('tbl_forgotpass', " `token` = '{$token}' ");
+				self::Database()->delete('tbl_forgotpass', "`token` = ?", array($token));
 			}
 			else{
-				$row = self::Database()->fetchRow(0, sprintf(
-					"SELECT `id`, `username`, `password`
-					FROM `tbl_authors`
-					WHERE SUBSTR(%s(CONCAT(`username`, `password`)), 1, 8) = '%s'
-					AND `auth_token_active` = 'yes'
-					LIMIT 1",
-					'SHA1', $token
-				));
+				$row = self::Database()->fetchRow(0, sprintf("
+						SELECT `id`, `username`, `password`
+						FROM `tbl_authors`
+						WHERE SUBSTR(%s(CONCAT(`username`, `password`)), 1, 8) = ?
+						AND `auth_token_active` = 'yes'
+						LIMIT 1",
+						'SHA1'
+					),
+					array($token)
+				);
 			}
 
 			if($row){
 				$this->Author = AuthorManager::fetchByID($row['id']);
 				$this->Cookie->set('username', $row['username']);
 				$this->Cookie->set('pass', $row['password']);
-				self::Database()->update(array('last_seen' => DateTimeObj::getGMT('Y-m-d H:i:s')), 'tbl_authors', " `id` = '{$row['id']}'");
+				self::Database()->update(array('last_seen' => DateTimeObj::getGMT('Y-m-d H:i:s')), 'tbl_authors', ' `id` = ?', array($row['id']));
 
 				return true;
 			}
@@ -526,7 +527,7 @@
 						self::Database()->update(array(
 							'last_seen' => DateTimeObj::get('Y-m-d H:i:s')),
 							'tbl_authors',
-							sprintf(" `id` = %d", $this->Author->get('id'))
+							' `id` = ?', array($this->Author->get('id'))
 						);
 
 						// Only set custom author language in the backend

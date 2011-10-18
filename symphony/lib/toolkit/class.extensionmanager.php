@@ -344,7 +344,7 @@
 			}
 			// Extension is installed, so update!
 			else {
-				Symphony::Database()->update($fields, 'tbl_extensions', " `id` = '$id '");
+				Symphony::Database()->update($fields, 'tbl_extensions', ' `id` = ?', array($id));
 			}
 
 			self::registerDelegates($name);
@@ -382,7 +382,7 @@
 					'version' => $info['version']
 				),
 				'tbl_extensions',
-				" `id` = '$id '"
+				' `id` = ?', array($id)
 			);
 
 			$obj->disable();
@@ -426,7 +426,7 @@
 			}
 
 			self::removeDelegates($name);
-			Symphony::Database()->delete('tbl_extensions', sprintf(" `name` = '%s' ", $name));
+			Symphony::Database()->delete('tbl_extensions', " `name` = ? ", array($name));
 
 			return true;
 		}
@@ -445,7 +445,7 @@
 
 			if(!$id) return false;
 
-			Symphony::Database()->delete('tbl_extensions_delegates', " `extension_id` = '$id ' ");
+			Symphony::Database()->delete('tbl_extensions_delegates', " `extension_id` = ?", array($id));
 
 			$delegates = $obj->getSubscribedDelegates();
 
@@ -484,17 +484,19 @@
 
 			if(!file_exists($path)) return false;
 
-			$delegates = Symphony::Database()->fetchCol('id', sprintf("
+			$delegates = Symphony::Database()->fetchCol('id', "
 					SELECT tbl_extensions_delegates.`id`
 					FROM `tbl_extensions_delegates`
 					LEFT JOIN `tbl_extensions`
 					ON (`tbl_extensions`.id = `tbl_extensions_delegates`.extension_id)
-					WHERE `tbl_extensions`.name = '%s'
-				", $name
-			));
+					WHERE `tbl_extensions`.name = ?
+				", 
+				array($name)
+			);
 
 			if(!empty($delegates)) {
-				Symphony::Database()->delete('tbl_extensions_delegates', " `id` IN ('". implode("', '", $delegates). "') ");
+				$placeholders = Database::addPlaceholders($delegates);
+				Symphony::Database()->delete('tbl_extensions_delegates', " `id` IN ($placeholders) ", $delegates);
 			}
 
 			// Remove the unused DB records
@@ -965,11 +967,11 @@
 
 					// If it doesnt exist, remove the DB rows
 					if(!@is_dir($path)){
-						Symphony::Database()->delete("tbl_extensions_delegates", " `extension_id` = $existing_id ");
-						Symphony::Database()->delete('tbl_extensions', " `id` = '$existing_id' LIMIT 1");
+						Symphony::Database()->delete("tbl_extensions_delegates", " `extension_id` = ?", array($existing_id));
+						Symphony::Database()->delete('tbl_extensions', " `id` = ? LIMIT 1", array($existing_id));
 					}
 					elseif ($status == 'disabled') {
-						Symphony::Database()->delete("tbl_extensions_delegates", " `extension_id` = $existing_id ");
+						Symphony::Database()->delete("tbl_extensions_delegates", " `extension_id` = ?", array($existing_id));
 					}
 				}
 			}

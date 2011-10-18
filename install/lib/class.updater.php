@@ -75,8 +75,6 @@
 
 			// MySQL: Setting prefix & character encoding
 			Symphony::Database()->setPrefix($details['tbl_prefix']);
-			Symphony::Database()->setCharacterEncoding();
-			Symphony::Database()->setCharacterSet();
 		}
 
 		public function run() {
