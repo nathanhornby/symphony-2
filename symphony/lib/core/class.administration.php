@@ -49,7 +49,7 @@
 			parent::__construct();
 
 			// Ensure the request is legitimate. RE: #1874
-			XSRF::validateRequest();
+			if(self::isXSRFEnabled()) XSRF::validateRequest();
 		}
 
 		/**
@@ -196,43 +196,10 @@
 
 				// Do any extensions need updating?
 				$extensions = Symphony::ExtensionManager()->listInstalledHandles();
+
 				if(is_array($extensions) && !empty($extensions) && $this->__canAccessAlerts()) {
 					foreach($extensions as $name) {
-						try {
-							$about = Symphony::ExtensionManager()->about($name);
-						}
-						catch (Exception $ex) {
-							// The extension cannot be found, show an error message and let the user remove
-							// or rename the extension folder.
-							if (isset($_POST['extension-missing'])) {
-								if(isset($_POST['action']['delete'])) {
-									Symphony::ExtensionManager()->cleanupDatabase();
-								}
-								else if (isset($_POST['action']['rename'])) {
-									if(!@rename(EXTENSIONS . '/' . $_POST['existing-folder'], EXTENSIONS . '/' . $_POST['new-folder'])) {
-										$this->throwCustomError(
-											__('Could not find extension %s at location %s.', array(
-												'<code>' . $ex->getAdditional()->name . '</code>',
-												'<code>' . $ex->getAdditional()->path . '</code>'
-											)),
-											__('Symphony Extension Missing Error'),
-											Page::HTTP_STATUS_ERROR,
-											'missing_extension',
-											array(
-												'name' => $ex->getAdditional()->name,
-												'path' => $ex->getAdditional()->path,
-												'rename_failed' => true
-											)
-										);
-									}
-								}
-
-								redirect(SYMPHONY_URL . '/system/extensions/');
-							}
-							else {
-								throw $ex;
-							}
-						}
+						$about = Symphony::ExtensionManager()->about($name);
 
 						if(array_key_exists('status', $about) && in_array(EXTENSION_REQUIRES_UPDATE, $about['status'])) {
 							$this->Page->pageAlert(
@@ -467,7 +434,7 @@
 			$this->__buildPage($page);
 
 			// Add XSRF token to form's in the backend
-			if(isset($this->Page->Form)) {
+			if(self::isXSRFEnabled() && isset($this->Page->Form)) {
 				$this->Page->Form->prependChild(XSRF::formToken());
 			}
 

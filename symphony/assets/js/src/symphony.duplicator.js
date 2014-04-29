@@ -164,8 +164,12 @@
 					instance.trigger('destructstop.duplicator');
 				}
 				else {
-					// instance.find('input[type!="hidden"]:first').focus();
 					instance.trigger('constructstop.duplicator');
+				}
+
+				// Update collapsible states
+				if(settings.collapsible) {
+					instance.trigger('store.collapsible');
 				}
 			});
 
@@ -308,7 +312,10 @@
 
 				// Single unique template
 				if(templates.is('.unique')) {
-					constructor.trigger('click.duplicator', [0]);
+					if(instances.length == 0) {
+						constructor.trigger('click.duplicator', [0]);
+					}
+					
 					apply.hide();
 				}
 			}
