@@ -1,9 +1,9 @@
 # Symphony 2
 
-- Version: 2.4 Release Candidate 2
-- Date: 29th April 2014
+- Version: 2.4
+- Date: 14th May 2014
 - [Release notes](http://getsymphony.com/download/releases/version/2.4/)
-- [Github repository](http://github.com/symphonycms/symphony-2/tree/2.4RC2)
+- [Github repository](http://github.com/symphonycms/symphony-2/tree/2.4R)
 
 
 ## Contents
@@ -22,7 +22,7 @@
 
 ## Overview
 
-Symphony is a `PHP` & `MySQL` based CMS that utilises `XML` and `XSLT` as its core technologies. This repository represents version `2.4 Release Candidate 2` and is considered stable.
+Symphony is a `PHP` & `MySQL` based CMS that utilises `XML` and `XSLT` as its core technologies. This repository represents version `2.4` and is considered stable.
 
 Useful places:
 
@@ -161,9 +161,10 @@ Version `2.0.5` introduced multiple includable elements in the Data Source Edito
 
 1. Pull from the master branch at `git://github.com/symphonycms/symphony-2.git`
 
-1. Use the following command to bring extensions up to date:
+1. Use the following two commands to bring extensions up to date:
 
 		git submodule update --init --recursive
+		git submodule update --recursive
 
 1. If updating from a version older than `2.0.5`, enable the [Debug DevKit](https://github.com/symphonycms/debugdevkit) and [Profile DevKit](https://github.com/symphonycms/profiledevkit) extensions.
 
