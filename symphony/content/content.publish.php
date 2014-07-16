@@ -136,8 +136,7 @@ class contentPublish extends AdministrationPage
 
         // Fields
         $fields = $this->_filteringFields;
-
-        for ($i = 1; $i < count($fields); $i++) {
+        for ($i = 0; $i < count($fields); $i++) {
             if ($fields[$i][0] === $field) {
                 $fields[$i][1] = true;
             }
@@ -184,6 +183,10 @@ class contentPublish extends AdministrationPage
         if (!$section_id) {
             return;
         }
+
+        // Meta data entry
+        $this->_filteringFields[] = array('system:creation-date', false, __('Entry Creation'));
+        $this->_filteringFields[] = array('system:modification-date', false, __('Entry Modification'));
 
         // Filterable sections
         $section = SectionManager::fetch($section_id);
@@ -269,21 +272,37 @@ class contentPublish extends AdministrationPage
             }
 
             foreach ($filters as $handle => $value) {
-                $field_id = FieldManager::fetchFieldIDFromElementName(
-                    Symphony::Database()->cleanValue($handle),
-                    $section->get('id')
-                );
+                $handle = Symphony::Database()->cleanValue($handle);
 
-                $field = FieldManager::fetch($field_id);
+                // Handle date meta data #2003
+                if (in_array($handle, array('system:creation-date', 'system:modification-date'))) {
+                    require_once TOOLKIT . '/fields/field.date.php';
 
-                if ($field instanceof Field) {
-                    // For deprecated reasons, call the old, typo'd function name until the switch to the
-                    // properly named buildDSRetrievalSQL function.
-                    $field->buildDSRetrievalSQL(array($value), $joins, $where, false);
-                    $filter_querystring .= sprintf("filter[%s]=%s&amp;", $handle, rawurlencode($value));
-                    $prepopulate_querystring .= sprintf("prepopulate[%d]=%s&amp;", $field_id, rawurlencode($value));
+                    $date_joins = '';
+                    $date_where = '';
+                    $date = new fieldDate();
+                    $date->buildDSRetrievalSQL(array($value), $date_joins, $date_where, true);
+
+                    // Replace the date field where with the `creation_date` or `modification_date`.
+                    $date_where = preg_replace('/`t\d+`.date/', ($field_id !== 'system:modification-date') ? '`e`.creation_date_gmt' : '`e`.modification_date_gmt', $date_where);
+                    $where .= $date_where;
+
                 } else {
-                    unset($filters[$handle]);
+                    // Handle normal fields
+                    $field_id = FieldManager::fetchFieldIDFromElementName(
+                        $handle,
+                        $section->get('id')
+                    );
+
+                    $field = FieldManager::fetch($field_id);
+
+                    if ($field instanceof Field) {
+                        $field->buildDSRetrievalSQL(array($value), $joins, $where, true);
+                        $filter_querystring .= sprintf("filter[%s]=%s&amp;", $handle, rawurlencode($value));
+                        $prepopulate_querystring .= sprintf("prepopulate[%d]=%s&amp;", $field_id, rawurlencode($value));
+                    } else {
+                        unset($filters[$handle]);
+                    }
                 }
             }
 
