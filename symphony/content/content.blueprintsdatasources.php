@@ -251,14 +251,21 @@ class contentBlueprintsDatasources extends ResourcesPage
             $options[] = $p;
         }
 
-        // Add Sections
+		// Add Sections
 		if(is_array($sections) && !empty($sections)){
-			$groups = array();
-			foreach($sections as $section) {
-				$groups[$section->get('navigation_group')][] = $section;
+			$navigation_groups = array();
+			foreach($sections as $key => $section) {
+				$ordered_sections[(int)$section->get('sortorder')] = $section;
 			}
-			foreach($groups as $group => $sections) {
-				array_unshift($options, array('label' => __($group), 'data-label' => 'sections', 'options' => array()));
+			ksort($ordered_sections);
+
+			foreach($ordered_sections as $key => $section) {
+			    $navigation_groups[$section->get('navigation_group')][] = $section;
+			}
+			$navigation_groups = array_reverse($navigation_groups);
+
+			foreach($navigation_groups as $navigation_group => $sections) {
+				array_unshift($options, array('label' => __($navigation_group), 'data-label' => 'sections', 'options' => array()));
 				foreach($sections as $s) {
 					$options[0]['options'][] = array($s->get('id'), ($fields['source'] == $s->get('id')), General::sanitize($s->get('name')));
 				}
