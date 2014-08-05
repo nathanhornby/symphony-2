@@ -252,13 +252,25 @@ class contentBlueprintsDatasources extends ResourcesPage
         }
 
         // Add Sections
-        if (is_array($sections) && !empty($sections)) {
-            array_unshift($options, array('label' => __('Sections'), 'data-label' => 'sections', 'options' => array()));
+		if(is_array($sections) && !empty($sections)){
+			$navigation_groups = array();
+			foreach($sections as $key => $section) {
+				$ordered_sections[(int)$section->get('sortorder')] = $section;
+			}
+			ksort($ordered_sections);
 
-            foreach ($sections as $s) {
-                $options[0]['options'][] = array($s->get('id'), ($fields['source'] == $s->get('id')), General::sanitize($s->get('name')));
-            }
-        }
+			foreach($ordered_sections as $key => $section) {
+			    $navigation_groups[$section->get('navigation_group')][] = $section;
+			}
+			$navigation_groups = array_reverse($navigation_groups);
+
+			foreach($navigation_groups as $navigation_group => $sections) {
+				array_unshift($options, array('label' => __($navigation_group), 'data-label' => 'sections', 'options' => array()));
+				foreach($sections as $s) {
+					$options[0]['options'][] = array($s->get('id'), ($fields['source'] == $s->get('id')), General::sanitize($s->get('name')));
+				}
+			}
+		}
 
         $div->appendChild(Widget::Select('source', $options, array('id' => 'ds-context')));
         $this->Context->prependChild($sources);
