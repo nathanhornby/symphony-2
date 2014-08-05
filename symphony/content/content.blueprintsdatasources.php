@@ -252,13 +252,18 @@ class contentBlueprintsDatasources extends ResourcesPage
         }
 
         // Add Sections
-        if (is_array($sections) && !empty($sections)) {
-            array_unshift($options, array('label' => __('Sections'), 'data-label' => 'sections', 'options' => array()));
-
-            foreach ($sections as $s) {
-                $options[0]['options'][] = array($s->get('id'), ($fields['source'] == $s->get('id')), General::sanitize($s->get('name')));
-            }
-        }
+		if(is_array($sections) && !empty($sections)){
+			$groups = array();
+			foreach($sections as $section) {
+				$groups[$section->get('navigation_group')][] = $section;
+			}
+			foreach($groups as $group => $sections) {
+				array_unshift($options, array('label' => __($group), 'data-label' => 'sections', 'options' => array()));
+				foreach($sections as $s) {
+					$options[0]['options'][] = array($s->get('id'), ($fields['source'] == $s->get('id')), General::sanitize($s->get('name')));
+				}
+			}
+		}
 
         $div->appendChild(Widget::Select('source', $options, array('id' => 'ds-context')));
         $this->Context->prependChild($sources);
